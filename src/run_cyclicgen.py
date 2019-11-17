@@ -99,10 +99,18 @@ def test(first, second, out):
         cv2.imwrite(out, output)
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    os.environ["CUDA_VISIBLE_DEVICES"] = 0
 
-    first = FLAGS.first
-    second = FLAGS.second
-    out = FLAGS.out
+    DATA_DIR = 'VideoData'
+    RESULT_DIR = 'interpolated-cyclic'
 
-    test(first, second, out)
+    result_path = RESULT_DIR+datetime.today().strftime('%Y-%m-%d')
+    os.mkdir(result_path)
+
+    for dire in os.listdir(DATA_DIR):
+        images = sorted(os.listdir(os.path.join(DATA_DIR, dire))):
+        first = images[0]
+        second = images[1]
+        first_number = int(images[0].split('frame')[-1].replace('.jpg', ''))
+        out = os.path.join(result_path, 'frame'+str(first_number+1)+'.jpg')
+        test(first, second, out)
