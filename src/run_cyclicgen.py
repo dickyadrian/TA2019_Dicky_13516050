@@ -119,6 +119,8 @@ if __name__ == '__main__':
 
     for dire in os.listdir(DATA_DIR):
         images = sorted(os.listdir(os.path.join(DATA_DIR, dire)))
+        if (len(images) < 2):
+            continue
         first = os.path.join(DATA_DIR, dire, images[0])
         second = os.path.join(DATA_DIR, dire, images[1])
         first_number = int(images[0].split('frame')[-1].replace('.jpg', ''))
