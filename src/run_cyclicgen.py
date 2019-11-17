@@ -110,8 +110,8 @@ if __name__ == '__main__':
     for dire in os.listdir(DATA_DIR):
         print(dire)
         images = sorted(os.listdir(os.path.join(DATA_DIR, dire)))
-        first = images[0]
-        second = images[1]
+        first = os.path.join(DATA_DIR, dire, images[0])
+        second = os.path.join(DATA_DIR, dire, images[1])
         first_number = int(images[0].split('frame')[-1].replace('.jpg', ''))
         out = os.path.join(result_path, 'frame'+str(first_number+1)+'.jpg')
         test(first, second, out)
