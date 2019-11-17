@@ -39,10 +39,10 @@ def imread(filename):
     return im / 127.5 - 1.0
 
 
-def test(first, second, out):
+def test(firsts, seconds, outs):
 
-    data_frame1 = np.expand_dims(imread(first), 0)
-    data_frame3 = np.expand_dims(imread(second), 0)
+    data_frame1 = np.expand_dims(imread(firsts[0]), 0)
+    data_frame3 = np.expand_dims(imread(seconds[0]), 0)
 
     H = data_frame1.shape[1]
     W = data_frame1.shape[2]
@@ -89,14 +89,19 @@ def test(first, second, out):
             print('%s: Pre-trained model restored from %s' %
                   (datetime.now(), FLAGS.pretrained_model_checkpoint_path))
 
-        feed_dict = {input_placeholder: np.concatenate((data_frame1, data_frame3), 3)}
-        # Run single step update.
-        prediction_np = sess.run(prediction, feed_dict=feed_dict)
+        for i in range(len(firsts)):
+            data_frame1 = np.expand_dims(imread(firsts[i]), 0)
+            data_frame3 = np.expand_dims(imread(seconds[i]), 0)
+            feed_dict = {input_placeholder: np.concatenate((data_frame1, data_frame3), 3)}
+            # Run single step update.
+            prediction_np = sess.run(prediction, feed_dict=feed_dict)
 
-        output = prediction_np[-1, pad_up:adatptive_H - pad_bot, pad_left:adatptive_W - pad_right, :]
-        output = np.round(((output + 1.0) * 255.0 / 2.0)).astype(np.uint8)
-        output = np.dstack((output[:, :, 2], output[:, :, 1], output[:, :, 0]))
-        cv2.imwrite(out, output)
+            output = prediction_np[-1, pad_up:adatptive_H - pad_bot, pad_left:adatptive_W - pad_right, :]
+            output = np.round(((output + 1.0) * 255.0 / 2.0)).astype(np.uint8)
+            output = np.dstack((output[:, :, 2], output[:, :, 1], output[:, :, 0]))
+            cv2.imwrite(outs[i], output)
+            data_frame1 = None
+            data_frame3 = None
 
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -107,6 +112,10 @@ if __name__ == '__main__':
     result_path = RESULT_DIR+datetime.today().strftime('%Y-%m-%d')
     os.mkdir(result_path)
 
+    firsts = []
+    seconds = []
+    outs = []
+
     for dire in os.listdir(DATA_DIR):
         print(dire)
         images = sorted(os.listdir(os.path.join(DATA_DIR, dire)))
@@ -114,4 +123,8 @@ if __name__ == '__main__':
         second = os.path.join(DATA_DIR, dire, images[1])
         first_number = int(images[0].split('frame')[-1].replace('.jpg', ''))
         out = os.path.join(result_path, 'frame'+str(first_number+1)+'.jpg')
-        test(first, second, out)
+        firsts.append(first)
+        seconds.append(second)
+        outs.append(out)
+    
+    test(firsts, seconds, outs)
