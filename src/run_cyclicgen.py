@@ -90,6 +90,7 @@ def test(firsts, seconds, outs):
                   (datetime.now(), FLAGS.pretrained_model_checkpoint_path))
 
         for i in range(len(firsts)):
+            print(firsts)
             data_frame1 = np.expand_dims(imread(firsts[i]), 0)
             data_frame3 = np.expand_dims(imread(seconds[i]), 0)
             feed_dict = {input_placeholder: np.concatenate((data_frame1, data_frame3), 3)}
@@ -117,7 +118,6 @@ if __name__ == '__main__':
     outs = []
 
     for dire in os.listdir(DATA_DIR):
-        print(dire)
         images = sorted(os.listdir(os.path.join(DATA_DIR, dire)))
         first = os.path.join(DATA_DIR, dire, images[0])
         second = os.path.join(DATA_DIR, dire, images[1])
