@@ -99,7 +99,7 @@ def test(first, second, out):
         cv2.imwrite(out, output)
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = 0
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
     DATA_DIR = 'VideoData'
     RESULT_DIR = 'interpolated-cyclic'
@@ -108,6 +108,7 @@ if __name__ == '__main__':
     os.mkdir(result_path)
 
     for dire in os.listdir(DATA_DIR):
+        print(dire)
         images = sorted(os.listdir(os.path.join(DATA_DIR, dire)))
         first = images[0]
         second = images[1]
