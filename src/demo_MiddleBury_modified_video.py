@@ -83,8 +83,6 @@ if DO_MiddleBurryOther:
     fps_new = ((2*frame_count)-1)/duration
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video = cv2.VideoWriter(OUT_NAME, fourcc, fps_new, (frame1.shape[1], frame2.shape[0]))
-    for image in file_paths:
-        video.write(cv2.imread(image))
     for i in tqdm(range(frame_count-1)):
 
         X0 =  torch.from_numpy( np.transpose(frame1 , (2,0,1)).astype("float32")/ 255.0).type(dtype)
