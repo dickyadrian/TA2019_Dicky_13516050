@@ -5,8 +5,10 @@ torch.set_grad_enabled(False) # make sure to not compute gradients for computati
 torch.backends.cudnn.enabled = True # make sure to use cudnn for computational performance
  
 if __name__ == '__main__':
-  # if torch.cuda.is_available():
-	# 		moduleNetwork = Network('./models/network-lf.pytorch').cuda().eval()
-	# 	else:
-	# 		moduleNetwork = Network('./models/network-lf.pytorch').eval()
-  print(__file__)
+  if torch.cuda.is_available():
+			moduleNetwork = Network('./models/network-lf.pytorch').cuda().eval()
+	else:
+			moduleNetwork = Network('./models/network-lf.pytorch').eval()
+  
+  out = improve_fps(2, './test.mp4', './', moduleNetwork)
+  print(out)
