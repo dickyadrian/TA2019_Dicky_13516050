@@ -6,9 +6,9 @@ torch.backends.cudnn.enabled = True # make sure to use cudnn for computational p
  
 if __name__ == '__main__':
   if torch.cuda.is_available():
-			moduleNetwork = Network('./models/network-lf.pytorch').cuda().eval()
+		moduleNetwork = Network('./models/network-lf.pytorch').cuda().eval()
 	else:
-			moduleNetwork = Network('./models/network-lf.pytorch').eval()
+		moduleNetwork = Network('./models/network-lf.pytorch').eval()
   
   out = improve_fps(2, './test.mp4', './', moduleNetwork)
   print(out)
