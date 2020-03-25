@@ -76,9 +76,9 @@ class Network(torch.nn.Module):
 		self.moduleHorizontal2 = Subnet()
 
 		if torch.cuda.is_available():
-			self.load_state_dict(torch.load(__file__.replace('run.py', 'network-lf' + '.pytorch')))
+			self.load_state_dict(torch.load(model_path))
 		else:
-			self.load_state_dict(torch.load(__file__.replace('run.py', 'network-lf' + '.pytorch'), map_location='cpu'))
+			self.load_state_dict(torch.load(model_path))
 	# end
 
 	def forward(self, tensorFirst, tensorSecond):
