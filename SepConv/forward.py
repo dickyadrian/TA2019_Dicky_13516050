@@ -111,6 +111,12 @@ class Network(torch.nn.Module):
 ##########################################################
 
 def estimate(tensorFirst, tensorSecond, network):
+	""" Returns output tensor from predicted tensors
+	Inputs:
+	- tensorFirst: first image tensor, normalized
+	- tensorSecond: second image tensor, normalized
+	- network: network used to predict
+	"""
 	intWidth = tensorFirst.shape[2]
 	intHeight = tensorFirst.shape[1]
 
@@ -144,6 +150,13 @@ def estimate(tensorFirst, tensorSecond, network):
 ##########################################################
 
 def improve_fps(times, file_in, out_dir, network):
+	""" Returns path of result video
+	Inputs:
+	- times: how many times you want to improve FPS, MUST be one of the following 2, 4, 8
+	- file_in: input path of video
+	- out_dir: directory where video result will be stored
+	- network: network used to do inference
+	"""
 	result = os.path.join(out_dir, 'result.mp4')
 
 	cap = cv2.VideoCapture(file_in)
