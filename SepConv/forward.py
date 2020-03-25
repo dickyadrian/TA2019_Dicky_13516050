@@ -108,20 +108,9 @@ class Network(torch.nn.Module):
 	# end
 # end
 
-moduleNetwork = None
-
 ##########################################################
 
 def estimate(tensorFirst, tensorSecond, network):
-	global moduleNetwork
-
-	if moduleNetwork is None:
-		if torch.cuda.is_available():
-			moduleNetwork = Network().cuda().eval()
-		else:
-			moduleNetwork = Network().eval()
-	# end
-
 	intWidth = tensorFirst.shape[2]
 	intHeight = tensorFirst.shape[1]
 
