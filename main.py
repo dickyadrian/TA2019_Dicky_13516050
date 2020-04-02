@@ -17,6 +17,7 @@ if __name__ == '__main__':
   
   start = time.time()
   out = improve_fps(2, './test.mp4', './', moduleNetwork)
+  print('hello')
   print("Inference done in: ", (time.time()-start))
 
   print("Result stored in ", out)
