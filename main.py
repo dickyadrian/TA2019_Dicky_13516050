@@ -1,23 +1,22 @@
-from SepConv.forward import *
+from SepConv.forward import improve_fps
+from SepConv.train import train
+import argparse
 import torch
-import time
+import os
+import warnings
+# Ignore deprecation warning thrown by pytorch
+warnings.filterwarnings("ignore", category=UserWarning) 
 
-torch.set_grad_enabled(False) # make sure to not compute gradients for computational performance
-torch.backends.cudnn.enabled = True # make sure to use cudnn for computational performance
- 
+def main():
+    parser = argparse.ArgumentParser(description="Sepconv in pytorch")
+    parser.add_argument("--train", action="store_true")
+    args = parser.parse_args()
+
+    if args.train:
+        train('db', 51, 'output_sepconv_pytorch', 10, 1, os.path.join('Interpolation_testset', 'input'), os.path.join('Interpolation_testset', 'gt'))
+    else:
+        result_file = improve_fps(1, 'test.mp4', 'result', './converted.pth')
+        print("Improved video stored in ", result_file)
+
 if __name__ == '__main__':
-  start = time.time()
-  # Check if CUDA is enabled
-  if torch.cuda.is_available():
-    moduleNetwork = Network('./models/network-lf.pytorch').cuda().eval()
-  else:
-    raise NotImplementedError() #Inference without CUDA is not implemented
-    moduleNetwork = Network('./models/network-lf.pytorch').eval()
-  print("Model loaded in: ", (time.time()-start))
-  
-  start = time.time()
-  out = improve_fps(2, './test.mp4', './', moduleNetwork)
-  print('hello')
-  print("Inference done in: ", (time.time()-start))
-
-  print("Result stored in ", out)
+    main()

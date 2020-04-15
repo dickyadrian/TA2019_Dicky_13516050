@@ -1,213 +1,91 @@
-#!/usr/bin/env python
-
-import torch
-
-import getopt
-import math
-import numpy
-import os
-import PIL
-import PIL.Image
-import random
-import shutil
-import sys
-import tempfile
 import cv2
+import numpy as np
+import torch
+import os
+from .model import SepConvNet
 from tqdm import tqdm
-from .sepconv import sepconv
+from torchvision import transforms
+from torch.autograd import Variable
+from PIL import Image
 
-##########################################################
+import sys
 
-class Network(torch.nn.Module):
-	def __init__(self, model_path):
-		super(Network, self).__init__()
+def cv_to_pil(img):
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return Image.fromarray(img_rgb)
 
-		def Basic(intInput, intOutput):
-			return torch.nn.Sequential(
-				torch.nn.Conv2d(in_channels=intInput, out_channels=intOutput, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False),
-				torch.nn.Conv2d(in_channels=intOutput, out_channels=intOutput, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False),
-				torch.nn.Conv2d(in_channels=intOutput, out_channels=intOutput, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False)
-			)
-		# end
+def to_variable(x):
+    if torch.cuda.is_available():
+        x = x.cuda()
+    else:
+        raise Exception("Only CUDA supported device can run this file")
+    return Variable(x)
 
-		def Upsample(intInput, intOutput):
-			return torch.nn.Sequential(
-				torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-				torch.nn.Conv2d(in_channels=intOutput, out_channels=intOutput, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False)
-			)
-		# end
+def improve_fps (times, input_file, out_dir, model_path):
+    result = os.path.join(out_dir, 'result.mp4')
 
-		def Subnet():
-			return torch.nn.Sequential(
-				torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False),
-				torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False),
-				torch.nn.Conv2d(in_channels=64, out_channels=51, kernel_size=3, stride=1, padding=1),
-				torch.nn.ReLU(inplace=False),
-				torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-				torch.nn.Conv2d(in_channels=51, out_channels=51, kernel_size=3, stride=1, padding=1)
-			)
-		# end
+    print('Reading input file...')
+    cap = cv2.VideoCapture(input_file)
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    old_fps = cap.get(cv2.CAP_PROP_FPS)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    duration = frame_count / old_fps
 
-		self.moduleConv1 = Basic(6, 32)
-		self.moduleConv2 = Basic(32, 64)
-		self.moduleConv3 = Basic(64, 128)
-		self.moduleConv4 = Basic(128, 256)
-		self.moduleConv5 = Basic(256, 512)
+    if times == 1:
+        fps = ((2 * frame_count) - 1) / duration
+    elif times == 2:
+        fps = ((4 * frame_count) - 3) / duration
+    elif times == 3:
+        fps = ((8 * frame_count) - 7) / duration
+    else:
+        print("Times is not supported, proceeding without interpolation")
+        fps = old_fps
 
-		self.moduleDeconv5 = Basic(512, 512)
-		self.moduleDeconv4 = Basic(512, 256)
-		self.moduleDeconv3 = Basic(256, 128)
-		self.moduleDeconv2 = Basic(128, 64)
+    fourcc = cv2.VideoWriter_fourcc(*'H264')
+    video = cv2.VideoWriter(result, fourcc, fps, (width, height))
+    
+    # Read first 2 frames
+    succ1, frame1 = cap.read()
+    succ2, frame2 = cap.read()
+    if not(succ1 and succ2):
+        raise Exception("Failed reading frames, video may contain less than 2 frames")
+    
+    print("Loading model ...")
+    checkpoint = torch.load(model_path)
+    kernel_size = checkpoint['kernel_size']
+    model = SepConvNet(kernel_size=kernel_size)
+    state_dict = checkpoint['state_dict']
+    model.load_state_dict(state_dict)
+    model.epoch = checkpoint['epoch']
+    model.cuda()
+    transform = transforms.Compose([transforms.ToTensor()])
 
-		self.moduleUpsample5 = Upsample(512, 512)
-		self.moduleUpsample4 = Upsample(256, 256)
-		self.moduleUpsample3 = Upsample(128, 128)
-		self.moduleUpsample2 = Upsample(64, 64)
-
-		self.moduleVertical1 = Subnet()
-		self.moduleVertical2 = Subnet()
-		self.moduleHorizontal1 = Subnet()
-		self.moduleHorizontal2 = Subnet()
-
-		if torch.cuda.is_available():
-			self.load_state_dict(torch.load(model_path))
-		else:
-			self.load_state_dict(torch.load(model_path))
-	# end
-
-	def forward(self, tensorFirst, tensorSecond):
-		tensorConv1 = self.moduleConv1(torch.cat([ tensorFirst, tensorSecond ], 1))
-		tensorConv2 = self.moduleConv2(torch.nn.functional.avg_pool2d(input=tensorConv1, kernel_size=2, stride=2, count_include_pad=False))
-		tensorConv3 = self.moduleConv3(torch.nn.functional.avg_pool2d(input=tensorConv2, kernel_size=2, stride=2, count_include_pad=False))
-		tensorConv4 = self.moduleConv4(torch.nn.functional.avg_pool2d(input=tensorConv3, kernel_size=2, stride=2, count_include_pad=False))
-		tensorConv5 = self.moduleConv5(torch.nn.functional.avg_pool2d(input=tensorConv4, kernel_size=2, stride=2, count_include_pad=False))
-
-		tensorDeconv5 = self.moduleUpsample5(self.moduleDeconv5(torch.nn.functional.avg_pool2d(input=tensorConv5, kernel_size=2, stride=2, count_include_pad=False)))
-		tensorDeconv4 = self.moduleUpsample4(self.moduleDeconv4(tensorDeconv5 + tensorConv5))
-		tensorDeconv3 = self.moduleUpsample3(self.moduleDeconv3(tensorDeconv4 + tensorConv4))
-		tensorDeconv2 = self.moduleUpsample2(self.moduleDeconv2(tensorDeconv3 + tensorConv3))
-
-		tensorCombine = tensorDeconv2 + tensorConv2
-		del tensorConv1, tensorConv2, tensorConv3, tensorConv4, tensorConv5, tensorDeconv5, tensorDeconv4, tensorDeconv3, tensorDeconv2
-
-		tensorFirst = torch.nn.functional.pad(input=tensorFirst, pad=[ int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)) ], mode='replicate')
-		tensorSecond = torch.nn.functional.pad(input=tensorSecond, pad=[ int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)) ], mode='replicate')
-
-		tensorDot1 = sepconv.FunctionSepconv(tensorInput=tensorFirst, tensorVertical=self.moduleVertical1(tensorCombine), tensorHorizontal=self.moduleHorizontal1(tensorCombine))
-		del tensorFirst
-		tensorDot2 = sepconv.FunctionSepconv(tensorInput=tensorSecond, tensorVertical=self.moduleVertical2(tensorCombine), tensorHorizontal=self.moduleHorizontal2(tensorCombine))
-		del tensorSecond
-
-		return tensorDot1 + tensorDot2
-	# end
-# end
-
-##########################################################
-
-def estimate(tensorFirst, tensorSecond, network):
-	""" Returns output tensor from predicted tensors
-	Inputs:
-	- tensorFirst: first image tensor, normalized
-	- tensorSecond: second image tensor, normalized
-	- network: network used to predict
-	"""
-	intWidth = tensorFirst.shape[2]
-	intHeight = tensorFirst.shape[1]
-
-	tensorPreprocessedFirst = tensorFirst.cuda().view(1, 3, intHeight, intWidth)
-	tensorPreprocessedSecond = tensorSecond.cuda().view(1, 3, intHeight, intWidth)
-
-	intPaddingLeft, intPaddingTop, intPaddingBottom, intPaddingRight = 0, 0, 0, 0
-
-	# end
-
-	intPreprocessedWidth = intPaddingLeft + intWidth + intPaddingRight
-	intPreprocessedHeight = intPaddingTop + intHeight + intPaddingBottom
-
-	if intPreprocessedWidth != ((intPreprocessedWidth >> 7) << 7):
-		intPreprocessedWidth = (((intPreprocessedWidth >> 7) + 1) << 7) # more than necessary
-	# end
-	
-	if intPreprocessedHeight != ((intPreprocessedHeight >> 7) << 7):
-		intPreprocessedHeight = (((intPreprocessedHeight >> 7) + 1) << 7) # more than necessary
-	# end
-
-	intPaddingRight = intPreprocessedWidth - intWidth - intPaddingLeft
-	intPaddingBottom = intPreprocessedHeight - intHeight - intPaddingTop
-
-	tensorPreprocessedFirst = torch.nn.functional.pad(input=tensorPreprocessedFirst, pad=[ intPaddingLeft, intPaddingRight, intPaddingTop, intPaddingBottom ], mode='replicate')
-	tensorPreprocessedSecond = torch.nn.functional.pad(input=tensorPreprocessedSecond, pad=[ intPaddingLeft, intPaddingRight, intPaddingTop, intPaddingBottom ], mode='replicate')
-
-	return torch.nn.functional.pad(input=network(tensorPreprocessedFirst, tensorPreprocessedSecond), pad=[ 0 - intPaddingLeft, 0 - intPaddingRight, 0 - intPaddingTop, 0 - intPaddingBottom ], mode='replicate')[0, :, :, :].cpu()
-# end
-
-##########################################################
-
-def improve_fps(times, file_in, out_dir, network):
-	""" Returns path of result video
-	Inputs:
-	- times: how many times you want to improve FPS, MUST be one of the following 2, 4, 8
-	- file_in: input path of video
-	- out_dir: directory where video result will be stored
-	- network: network used to do inference
-	"""
-	result = os.path.join(out_dir, 'result.mp4')
-
-	cap = cv2.VideoCapture(file_in)
-	frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-	old_fps = cap.get(cv2.CAP_PROP_FPS)
-	height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-	width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-	duration = frame_count / old_fps
-	if times == 1:
-		fps = ((2 * frame_count) - 1) / duration
-	elif times == 2:
-		fps = ((4 * frame_count) - 3) / duration
-	elif times == 3:
-		fps = ((8 * frame_count) - 7) / duration
-	else:
-		fps = old_fps
-	fourcc = cv2.VideoWriter_fourcc(*'H264')
-	video = cv2.VideoWriter(result, fourcc, fps, (width, height))
-
-	succ1, frame1 = cap.read()
-	succ2, frame2 = cap.read()
-
-	if not(succ1 and succ2):
-		return 'FAILED'
-
-	frames = [frame1, frame2]
-
-	with torch.no_grad():
-		for i in tqdm(range(int(frame_count-1))):
-			for i in range(times):
-				for i in range(len(frames) - 1):
-					tensorFirst = torch.FloatTensor(frames[i][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-					tensorSecond = torch.FloatTensor(frames[i+1][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-
-					tensorOutput = estimate(tensorFirst, tensorSecond, network)
-					im_out = (tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)
-					frames.insert(i+1, im_out)
-
-			if i == 0:
-				for frame in frames:
-					video.write(frame)
-			else:
-				for i in range(1, len(frames)):
-					video.write(frames[i])
-
-			frame1 = frame2
-			success, frame2 = cap.read()
-			
-			if not success:
-				break
-			frames = [frame1, frame2]
-	video.release()
-	cv2.destroyAllWindows()
-	return result
+    print("Forward Start...")
+    frames = [frame1, frame2]
+    for i in tqdm(range(int(frame_count-1))):
+        for j in range(times):
+            for k in range(len(frames) - 1):
+                firstImage = to_variable(transform(cv_to_pil(frames[k])).unsqueeze(0))
+                secondImage = to_variable(transform(cv_to_pil(frames[k+1])).unsqueeze(0))
+                frame_out = model(firstImage, secondImage)
+                frame_out = frame_out.cpu().squeeze()
+                im_out = (frame_out.clamp(0.0, 1.0).detach().numpy().transpose(1,2,0)[:, :, ::-1] * 255.0).astype(np.uint8)
+                frames.insert(k+1, im_out)
+        
+        if (i == 0):
+            for frame in frames:
+                video.write(frame)
+        else:
+            for j in range(1, len(frames)):
+                video.write(frames[j])
+        
+        frame1 = frame2
+        succ2, frame2 = cap.read()
+        if not succ2:
+            break
+        frames = [frame1, frame2]
+    
+    video.release()
+    cv2.destroyAllWindows()
+    return result
