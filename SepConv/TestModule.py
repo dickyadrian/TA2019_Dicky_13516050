@@ -44,7 +44,7 @@ class Middlebury_other:
             av_psnr += psnr
             imwrite(frame_out, output_dir + '/' + self.im_list[idx] + '/' + output_name, range=(0, 1))
             msg = '{:<15s}{:<20.16f}'.format(self.im_list[idx] + ': ', psnr) + '\n'
-            print(msg, end='')
+            # print(msg, end='')
             if logfile is not None:
                 logfile.write(msg)
         av_psnr /= len(self.im_list)

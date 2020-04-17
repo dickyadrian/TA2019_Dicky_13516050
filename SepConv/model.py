@@ -134,7 +134,7 @@ class SepConvNet(torch.nn.Module):
         self.epoch = Variable(torch.tensor(0, requires_grad=False))
         self.get_kernel = KernelEstimation(self.kernel_size)
         self.optimizer = optim.Adam(self.parameters(), lr=0.001)
-        self.criterion = torch.nn.MSELoss()
+        self.criterion = torch.nn.L1Loss()
 
         self.modulePad = torch.nn.ReplicationPad2d([self.kernel_pad, self.kernel_pad, self.kernel_pad, self.kernel_pad])
 
@@ -176,11 +176,16 @@ class SepConvNet(torch.nn.Module):
 
     def train_model(self, frame0, frame2, frame1):
         self.optimizer.zero_grad()
-        output = self.forward(frame0, frame2)
-        loss = self.criterion(output, frame1)
-        loss.backward()
+        output1 = self.forward(frame0, frame2)
+        output2 = self.forward(frame0, frame1)
+        output3 = self.forward(frame1, frame2)
+        output4 = self.forward(output2, output3)
+        loss1 = self.criterion(output1, frame1)
+        loss2 = self.criterion(output4, frame1)
+        total_loss = sum([loss1, loss2])
+        total_loss.backward()
         self.optimizer.step()
-        return loss
+        return total_loss
 
     def increase_epoch(self):
         self.epoch += 1

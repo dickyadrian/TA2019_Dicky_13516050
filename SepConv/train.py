@@ -60,6 +60,7 @@ def train(train_dir, kernel_size, out_dir, epochs, batch_size, test_input, gt, l
         state_dict = checkpoint['state_dict']
         model.load_state_dict(state_dict)
         model.epoch = checkpoint['epoch']
+        print("Model Loaded!")
     else:
         model = SepConvNet(kernel_size=kernel_size)
 
