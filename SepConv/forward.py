@@ -42,7 +42,7 @@ def improve_fps (times, input_file, out_dir, model_path):
         print("Times is not supported, proceeding without interpolation")
         fps = old_fps
 
-    fourcc = cv2.VideoWriter_fourcc(*'H264')
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     video = cv2.VideoWriter(result, fourcc, fps, (width, height))
     
     # Read first 2 frames
