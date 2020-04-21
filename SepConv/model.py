@@ -5,6 +5,7 @@ import math
 from .sepconv import *
 import sys
 from torch.nn import functional as F
+import time
 
 
 def to_variable(x):
@@ -81,46 +82,89 @@ class KernelEstimation(torch.nn.Module):
 
     def forward(self, rfield0, rfield2):
         tensorJoin = torch.cat([rfield0, rfield2], 1)
+        print("tensorJoin shape:", tensorJoin.shape)
 
+        print("Start Conv1")
+        start = time.time()
         tensorConv1 = self.moduleConv1(tensorJoin)
         tensorPool1 = self.modulePool1(tensorConv1)
+        print("Ended in ", time.time() - start, "shape: ", tensorPool1.shape)
 
+        print("Start Conv2")
+        start = time.time()
         tensorConv2 = self.moduleConv2(tensorPool1)
         tensorPool2 = self.modulePool2(tensorConv2)
+        print("Ended in ", time.time() - start, "shape: ", tensorPool2.shape)
 
+        print("Start Conv3")
+        start = time.time()
         tensorConv3 = self.moduleConv3(tensorPool2)
         tensorPool3 = self.modulePool3(tensorConv3)
+        print("Ended in ", time.time() - start, "shape: ", tensorPool3.shape)
 
+        print("Start Conv4")
+        start = time.time()
         tensorConv4 = self.moduleConv4(tensorPool3)
         tensorPool4 = self.modulePool4(tensorConv4)
+        print("Ended in ", time.time() - start, "shape: ", tensorPool4.shape)
 
+        print("Start Conv5")
+        start = time.time()
         tensorConv5 = self.moduleConv5(tensorPool4)
         tensorPool5 = self.modulePool5(tensorConv5)
+        print("Ended in ", time.time() - start, "shape: ", tensorPool5.shape)
 
+        print("Start deconv5")
+        start = time.time()
         tensorDeconv5 = self.moduleDeconv5(tensorPool5)
         tensorUpsample5 = self.moduleUpsample5(tensorDeconv5)
+        print("Ended in ", time.time() - start, "shape: ", tensorUpsample5.shape)
 
         tensorCombine = tensorUpsample5 + tensorConv5
 
+        print("Start deconv4")
+        start = time.time()
         tensorDeconv4 = self.moduleDeconv4(tensorCombine)
         tensorUpsample4 = self.moduleUpsample4(tensorDeconv4)
+        print("Ended in ", time.time() - start, "shape: ", tensorUpsample4.shape)
 
         tensorCombine = tensorUpsample4 + tensorConv4
 
+        print("Start deconv3")
+        start = time.time()
         tensorDeconv3 = self.moduleDeconv3(tensorCombine)
         tensorUpsample3 = self.moduleUpsample3(tensorDeconv3)
+        print("Ended in ", time.time() - start, "shape: ", tensorUpsample3.shape)
 
         tensorCombine = tensorUpsample3 + tensorConv3
 
+        print("Start deconv2")
+        start = time.time()
         tensorDeconv2 = self.moduleDeconv2(tensorCombine)
         tensorUpsample2 = self.moduleUpsample2(tensorDeconv2)
+        print("Ended in ", time.time() - start, "shape: ", tensorUpsample2.shape)        
 
         tensorCombine = tensorUpsample2 + tensorConv2
 
+        print("Start vertical1")
+        start = time.time()
         Vertical1 = self.moduleVertical1(tensorCombine)
+        print("Ended in ", time.time() - start, "shape: ", Vertical1.shape)
+
+        print("Start vertical2")
+        start = time.time()
         Vertical2 = self.moduleVertical2(tensorCombine)
+        print("Ended in ", time.time() - start, "shape: ", Vertical2.shape)
+
+        print("Start horizontal1")
+        start = time.time()
         Horizontal1 = self.moduleHorizontal1(tensorCombine)
+        print("Ended in ", time.time() - start, "shape: ", Horizontal1.shape)
+
+        print("Start horizontal2")
+        start = time.time()
         Horizontal2 = self.moduleHorizontal2(tensorCombine)
+        print("Ended in ", time.time() - start, "shape: ", Horizontal2.shape)
 
         return Vertical1, Horizontal1, Vertical2, Horizontal2
 
@@ -161,9 +205,13 @@ class SepConvNet(torch.nn.Module):
             w_padded = True
 
         Vertical1, Horizontal1, Vertical2, Horizontal2 = self.get_kernel(frame0, frame2)
-
+        
+        start = time.time()
         tensorDot1 = FunctionSepconv()(self.modulePad(frame0), Vertical1, Horizontal1)
+        print(tensorDot1.shape, "Tensordot1 shape, finish in: ", time.time() - start)
+        start = time.time()
         tensorDot2 = FunctionSepconv()(self.modulePad(frame2), Vertical2, Horizontal2)
+        print(tensorDot2.shape, "Tensordot2 shape, finish in: ", time.time() - start)
 
         frame1 = tensorDot1 + tensorDot2
 
