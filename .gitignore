@@ -1,8 +1,11 @@
-/__pycache__
-*/__pycache__
+**/__pycache__
+/Deoldify/models/
+/Deoldify/video/
 *.pth
 *.pytorch
 /result
 */result
-log.txt
-/db
+/video/bwframes
+/video/colorframes
+/video/result
+/video/source/*.mp4
