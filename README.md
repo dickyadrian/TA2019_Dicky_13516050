@@ -1,5 +1,6 @@
 # Repository for Final Assessment ITB 2019
 ## Topic: Video Interpolation
+This is a branch archived for training sepconv
 
 ## references
 ```
