@@ -21,7 +21,7 @@ def main():
     else:
         sepconv_path = os.path.join("video", "source", "input.mp4")
     print(colorized_path)
-    result_file = improve_fps(1, sepconv_path)
+    result_file = improve_fps(1, str(sepconv_path))
     print("Improved video stored in ", result_file)
 
 if __name__ == '__main__':

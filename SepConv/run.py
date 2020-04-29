@@ -14,11 +14,8 @@ import sys
 import tempfile
 import cv2
 from tqdm import tqdm
+from .sepconv.sepconv import FunctionSepconv
 
-try:
-	from SepConv.sepconv import sepconv # the custom separable convolution layer
-except:
-	sys.path.insert(0, './sepconv'); import sepconv # you should consider upgrading python
 # end
 
 ##########################################################
@@ -108,9 +105,9 @@ class Network(torch.nn.Module):
 		tensorFirst = torch.nn.functional.pad(input=tensorFirst, pad=[ int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)) ], mode='replicate')
 		tensorSecond = torch.nn.functional.pad(input=tensorSecond, pad=[ int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)), int(math.floor(51 / 2.0)) ], mode='replicate')
 
-		tensorDot1 = sepconv.FunctionSepconv(tensorInput=tensorFirst, tensorVertical=self.moduleVertical1(tensorCombine), tensorHorizontal=self.moduleHorizontal1(tensorCombine))
+		tensorDot1 = FunctionSepconv(tensorInput=tensorFirst, tensorVertical=self.moduleVertical1(tensorCombine), tensorHorizontal=self.moduleHorizontal1(tensorCombine))
 		del tensorFirst
-		tensorDot2 = sepconv.FunctionSepconv(tensorInput=tensorSecond, tensorVertical=self.moduleVertical2(tensorCombine), tensorHorizontal=self.moduleHorizontal2(tensorCombine))
+		tensorDot2 = FunctionSepconv(tensorInput=tensorSecond, tensorVertical=self.moduleVertical2(tensorCombine), tensorHorizontal=self.moduleHorizontal2(tensorCombine))
 		del tensorSecond
 
 		return tensorDot1 + tensorDot2
