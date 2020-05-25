@@ -177,6 +177,7 @@ def improve_fps(times, video_path):
 		fps = ((8 * frame_count) - 7) / duration
 	else:
 		fps = old_fps
+	fps = round(fps)
 	fourcc = cv2.VideoWriter_fourcc(*'H264')
 	video = cv2.VideoWriter(result, fourcc, fps, (width, height))
 
@@ -190,21 +191,21 @@ def improve_fps(times, video_path):
 
 	with torch.no_grad():
 		for i in tqdm(range(int(frame_count-1))):
-			for i in range(times):
-				for i in range(len(frames) - 1):
-					tensorFirst = torch.FloatTensor(frames[i][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-					tensorSecond = torch.FloatTensor(frames[i+1][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+			for j in range(times):
+				for k in range(len(frames) - 1):
+					tensorFirst = torch.FloatTensor(frames[k][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+					tensorSecond = torch.FloatTensor(frames[k+1][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
 
 					tensorOutput = estimate(tensorFirst, tensorSecond)
 					im_out = (tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)
-					frames.insert(i+1, im_out)
+					frames.insert(k+1, im_out)
 
 			if i == 0:
 				for frame in frames:
 					video.write(frame)
 			else:
-				for i in range(1, len(frames)):
-					video.write(frames[i])
+				for l in range(1, len(frames)):
+					video.write(frames[l])
 
 			frame1 = frame2
 			success, frame2 = cap.read()
