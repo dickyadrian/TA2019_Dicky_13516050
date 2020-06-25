@@ -160,8 +160,8 @@ def estimate(tensorFirst, tensorSecond):
 
 ##########################################################
 
-def improve_fps(times, video_path):
-	result = os.path.join('video', 'result', 'result.mp4')
+def improve_fps(times, video_path, out_file="video/result/result.mp4"):
+	result = out_file
 
 	cap = cv2.VideoCapture(video_path)
 	frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -191,6 +191,8 @@ def improve_fps(times, video_path):
 
 	with torch.no_grad():
 		for i in tqdm(range(int(frame_count-1))):
+			frames_copy = frames.copy()
+			i = 1
 			for j in range(times):
 				for k in range(len(frames) - 1):
 					tensorFirst = torch.FloatTensor(frames[k][:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
@@ -198,7 +200,9 @@ def improve_fps(times, video_path):
 
 					tensorOutput = estimate(tensorFirst, tensorSecond)
 					im_out = (tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)
-					frames.insert(k+1, im_out)
+					frames_copy.insert(k+i, im_out)
+					i += 1
+				frames = frames_copy[:]
 
 			if i == 0:
 				for frame in frames:

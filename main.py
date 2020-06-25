@@ -1,5 +1,5 @@
 from SepConv.run import improve_fps
-from DeOldify.videoColorizer import colorize_video
+from DeOldify.videoColorizer import colorize_video, get_colorizer
 import argparse
 import torch
 import os
@@ -16,11 +16,12 @@ def main():
     print("Is CUDA available? ", torch.cuda.is_available())
 
     if args.colorize:
-        colorized_path = colorize_video()
+        colorizer = get_colorizer()
+        colorized_path = colorize_video("input.mp4", colorizer)
         sepconv_path = colorized_path
     else:
-        sepconv_path = os.path.join("video", "source", "input.mp4")
-    result_file = improve_fps(1, str(sepconv_path))
+        sepconv_path = os.path.join("video", "source", "video_tes.mp4")
+    result_file = improve_fps(3, str(sepconv_path))
     print("Improved video stored in ", result_file)
 
 if __name__ == '__main__':

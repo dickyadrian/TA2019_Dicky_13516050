@@ -4,11 +4,9 @@ from DeOldify.deoldify.visualize import *
 def get_colorizer():
     return get_video_colorizer()
 
-def colorize_video():
-    file_name = 'input'
-    file_name_ext = file_name + '.mp4'
+def colorize_video(filename, colorizer):
+    file_name_ext = filename
     result_path = None
-    colorizer = get_colorizer()
     result_path = colorizer.colorize_from_file_name(file_name_ext)
     return result_path
 
